@@ -1,0 +1,43 @@
+{
+    "title": "Manager",
+    "description": "CLI tool for concise project management.",
+    "features": [
+        [
+            "create",
+            "Config creation"
+        ],
+        [
+            "edit",
+            "Config edit"
+        ],
+        [
+            "scan-todo",
+            "Scan files for TODOs"
+        ],
+        [
+            "git-init",
+            "Generate git (if not present)"
+        ],
+        [
+            "project-paths",
+            "Allow separate paths listing"
+        ],
+        [
+            "measure-feat",
+            "Measure feature completion (by flag comments., etc.)"
+        ],
+        [
+            "measure-test",
+            "Measure tests completion (by flag comments., etc.)"
+        ]
+    ],
+    "paths": [
+        {
+            "name": "main",
+            "path": "",
+            "excludes": [
+                "**/__pycache__/**"
+            ]
+        }
+    ]
+}
