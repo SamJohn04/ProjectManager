@@ -18,7 +18,7 @@ def write_json(json_data, path: str):
         json.dump(json_data, file, indent = 4)
 
 
-def read_json(path: str) -> any:
+def read_json(path: str):
     with open(path, 'r') as file:
         return json.load(file)
 

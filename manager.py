@@ -1,7 +1,6 @@
 import sys
 
-import argparse
-
+from data.feature import Feature
 from util.path import ConfigPath
 from util import io
 from data.config import Config
@@ -30,68 +29,103 @@ def init_config(config_path: ConfigPath, args: list[str], kwargs: dict[str, str 
     io.write_json(new_config.to_json(), config_path.config_path)
 
 
-def scan_project_path(config_path: ConfigPath, project_path: ProjectPath, verbose: bool = False):
-    if input(f"Scan {project_path.name}? (Y|n)").lower() == 'n':
+def scan_project_path(config: Config, root_path: str, project_path: ProjectPath, verbose: bool = False):
+    if input(f"Scan {project_path.name} for todos? (Y|n) ").lower() == 'n':
         return
-    all_todos = scan.scan_todos(list(project_path.all_file_paths(config_path.root_path)))
-    for file_path in all_todos:
-        if all_todos[file_path] is None:
+    all_todos, cannot_open = scan.scan_keyword_in_project_path(project_path, root_path, config.todo_flag)
+    if verbose:
+        if len(cannot_open) > 0:
+            print("Cannot Open:", ', '.join(cannot_open))
+    for item in all_todos:
+        item.to_stdout(verbose)
+
+
+def scan_feature_complete(config: Config, root_path: str, project_path: ProjectPath, verbose: bool = False):
+    if input(f"Scan {project_path.name} for features? (Y|n) ").lower() == 'n':
+        return
+
+    all_feats, cannot_open = scan.scan_keyword_in_project_path(project_path, root_path, config.feat_flag)
+
+    feature_names = [feature.name.replace(' ', '_') for feature in config.features]
+    
+    if verbose:
+        if len(cannot_open) > 0:
+            print("Cannot Open:", ', '.join(cannot_open))
+
+    feature_flags = {}
+    for item in all_feats:
+        if len(item.indices) == 0:
             continue
-        if len(all_todos[file_path]) == 0:
-            if verbose:
-                print(f"{file_path}: Complete!")
+        for index in item.indices:
+            curr_feature_flag = item.lines[index]
+            curr_feature_flag = curr_feature_flag[curr_feature_flag.index(config.feat_flag):]
+            curr_split = curr_feature_flag.rstrip().split()
+            if len(curr_split) < 2:
+                continue
+            if len(curr_split) == 2:
+                curr_feature_flag, status = curr_split[1], 'UNMARKED'
+            else:
+                curr_feature_flag, status = curr_split[1], curr_split[2]
+
+            if curr_feature_flag not in feature_names:
+                print(curr_feature_flag, "not found in features.")
+                continue
+
+            if curr_feature_flag in feature_flags:
+                print(f"Feature flag {curr_feature_flag} found in {feature_flags[curr_feature_flag][0].path} and {item.path}")
+                continue
+            feature_flags[curr_feature_flag] = status, item.path
+
+    for feature_name in feature_names:
+        if feature_name not in feature_flags:
+            print(f"{feature_name}:\t\tNot Started")
             continue
         if verbose:
-            print(f"{file_path}: ")
-            for index, line in all_todos[file_path]:
-                print(f"\t{index}. {line}")
+            print(f"{feature_name}:\t\t{'\t'.join(feature_flags[feature_name])}")
         else:
-            print(f"{file_path}: {', '.join(map((lambda todo_item: f'line {todo_item[0]}'), all_todos[file_path]))}")
-
+            print(f"{feature_name}:\t\t{feature_flags[feature_name][0]}")
+  
 
 def main():
     args, kwargs = parse(sys.argv[1:])
     command = args[0] if len(args) > 0 else 'view'
-    assert command in ('init', 'view', 'scan', 'add')
+    assert command in ('init', 'view', 'scan', 'edit', 'set')
 
     config_path = ConfigPath(kwargs.get('--path'))
 
     match command:
+        # @FEAT create DONE
         case 'init':
             init_config(config_path, args, kwargs)
         case 'view':
             config = get_config(config_path, kwargs.get('-u', False) or kwargs.get('--update', False))
             config.to_stdout(kwargs.get('-v', False) or kwargs.get('--verbose', False))
-        case 'add':
-            # TODO
+        # @FEAT edit TODO
+        case 'edit':
             pass
         case 'scan':
             config = get_config(config_path, kwargs.get('-u', False) or kwargs.get('--update', False))
             for project_path in config.project_paths:
-                scan_project_path(config_path, project_path, kwargs.get('-v', False) or kwargs.get('--verbose', False))
-
-
-"""
-def o_main():
-    arg_parser = get_arg_parser()
-    args = arg_parser.parse_args(sys.argv[1:])
-    config_path = ConfigPath()
-
-    match args.command:
-        case 'init':
-            init_config(config_path)
-        case 'view':
-            get_config(config_path).to_stdout()
-        case 'scan':
+                # @FEAT scan-todo DONE
+                scan_project_path(config, config_path.root_path, project_path, kwargs.get('-v', False) or kwargs.get('--verbose', False))
+                print("\n")
+                # @FEAT measure-feat
+                scan_feature_complete(config, config_path.root_path, project_path, kwargs.get('-v', False) or kwargs.get('--verbose', False))
+        case 'set':
             config = get_config(config_path)
-            project_paths = [ProjectPath('main', '')] if len(config.project_paths) == 0 else config.project_paths
-            for project_path in project_paths:
-                scan_project_path(config_path, project_path)
-        case 'add':
-            config = get_config(config_path)
-            choice = input('1.\tProject Path\n2.\tFeature').lower()
+
+            if len(args) < 2:
+                # TODO
+                pass
+            elif args[1] not in ['todo-flag', 'feat-flag', 'line-padding']:
+                # TODO
+                pass
+            elif len(args) < 3:
+                config.options.pop(args[1], None)
+            else:
+                config.options[args[1]] = args[2]
+
             io.write_json(config.to_json(), config_path.config_path)
-"""
 
 
 def parse(input_args: list[str]):
@@ -113,14 +147,6 @@ def parse(input_args: list[str]):
 
     return args, kwargs
 
-
-def get_arg_parser():
-    arg_parser = argparse.ArgumentParser(
-            prog='manage',
-            description='CLI tool for concise project management.',
-            )
-    arg_parser.add_argument('command', choices = ['init', 'view', 'add', 'scan'], default = 'view', nargs='?')
-    return arg_parser
 
 if __name__ == '__main__':
     main()

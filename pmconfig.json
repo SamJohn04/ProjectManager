@@ -36,8 +36,10 @@
             "name": "main",
             "path": "",
             "excludes": [
+                "pmconfig.json",
                 "**/__pycache__/**"
             ]
         }
-    ]
+    ],
+    "todo-flag": "pass"
 }

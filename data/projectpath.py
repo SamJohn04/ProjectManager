@@ -10,7 +10,7 @@ class ProjectPath:
         self.path = path
 
         self.includes = ['**'] if includes is None else includes
-        self.excludes = [] if excludes is None else excludes
+        self.excludes = ['pmconfig.json'] if excludes is None else excludes
 
     def all_file_paths(self, root_path: str) -> set[str]:
         all_paths = set()
@@ -32,7 +32,7 @@ class ProjectPath:
 
         if self.includes != ['**']:
             project_path_json['includes'] = self.includes
-        if self.excludes != []:
+        if self.excludes != ['pmconfig.json']:
             project_path_json['excludes'] = self.excludes
 
         return project_path_json
