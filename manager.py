@@ -81,7 +81,8 @@ def scan_feature_complete(config: Config, root_path: str, project_path: ProjectP
             print(f"{feature_name}:\t\tNot Started")
             continue
         if verbose:
-            print(f"{feature_name}:\t\t{'\t'.join(feature_flags[feature_name])}")
+            feature_flags_string = '\t'.join(feature_flags[feature_name])
+            print(f"{feature_name}:\t\t{feature_flags_string}")
         else:
             print(f"{feature_name}:\t\t{feature_flags[feature_name][0]}")
   

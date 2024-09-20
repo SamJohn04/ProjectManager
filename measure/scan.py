@@ -22,7 +22,8 @@ class Scan:
             low_index = max(0, index - line_pad)
             high_index = min(index + line_pad + 1, len(self.lines))
             for line_index in range(low_index, high_index):
-                print(f"\t{line_index}. {self.lines[line_index].rstrip('\n')}")
+                stripped_line = self.lines[line_index].rstrip('\n')
+                print(f"\t{line_index}. {stripped_line}")
             print()
 
 

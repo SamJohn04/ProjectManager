@@ -40,8 +40,8 @@ class ProjectPath:
     def to_stdout(self, verbose: bool = False):
         print(f"\t{self.name}: '{self.path}'")
         if verbose:
-            print(f"\tInclude: [{', '.join(self.includes)}]")
-            print(f"\tExclude: [{', '.join(self.excludes)}]")
+            print(f"\t\tInclude: [{', '.join(self.includes)}]")
+            print(f"\t\tExclude: [{', '.join(self.excludes)}]")
 
     @staticmethod
     def from_json(project_path_json: dict):
