@@ -22,10 +22,16 @@ class Config:
         assert new_feature.name not in [feature.name for feature in self.features], "Feature name already defined."
         self.features.append(new_feature)
 
+    def remove_feature(self, feature_name):
+        self.features = [feature for feature in self.features if feature.name != feature_name]
+
     def add_new_project_path(self):
         new_project_path = ProjectPath.from_stdin()
         assert new_project_path.name not in [project_path.name for project_path in self.project_paths], "Name already defined."
         self.project_paths.append(new_project_path)
+
+    def remove_project_path(self, path_name):
+        self.project_paths = [project_path for project_path in self.project_paths if project_path.name != path_name]
 
     def to_json(self) -> dict:
         config_json = {
@@ -59,7 +65,7 @@ class Config:
         return Config(
                 json_data['title'],
                 json_data['description'],
-                list(map(Feature.from_json, json_data['features'])),
+                list(map(Feature.from_json, json_data.get('features', []))),
                 list(map(ProjectPath.from_json, json_data.get('paths', []))),
                 options
                 )
@@ -68,8 +74,5 @@ class Config:
     def from_stdin():
         title = input('Title: ')
         description = input('Description: ')
-        return Config(
-                title,
-                description,
-                )
+        return Config(title, description)
 

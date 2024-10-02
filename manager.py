@@ -1,7 +1,8 @@
+import os
 import sys
 
-from data.feature import Feature
-from util.path import ConfigPath
+from error.config import ConfigParseError
+from util.path import get_root_path_and_config_path
 from util import io
 from data.config import Config
 from data.projectpath import ProjectPath
@@ -9,24 +10,56 @@ from measure import scan
 
 
 VALUE_ARG_KEYWORDS = { '--path' }
-FLAG_ARG_KEYWORDS = { '-v', '--verbose', '-u', '--update' }
+FLAG_ARG_KEYWORDS = { '-v', '--verbose', '-u', '--update', '--force' }
 
 
-def get_config(config_path: ConfigPath, update_if_change: bool = False):
-    assert config_path.does_config_exist(), 'Config does not exist. Use \'init\''
-    config_json = io.read_json(config_path.config_path)
-    config = Config.from_json(config_json)
+# @FEAT init DONE
+def init_config(config_path: str, args: list[str], kwargs: dict[str, str | bool]):
+    if os.path.exists(config_path) and not kwargs.get('--force'):
+        raise Exception('Config Already Exists')
+
+    new_config = Config.from_stdin()
+    io.write_json(new_config.to_json(), config_path)
+
+
+# @FEAT view DONE
+def view_config(config_path: str, args: list[str], kwargs: dict[str, str | bool]):
+    try:
+        config = get_config(config_path, bool(kwargs.get('-u', False) or kwargs.get('--update', False)))
+        config.to_stdout(bool(kwargs.get('-v', False) or kwargs.get('--verbose', False)))
+    except FileNotFoundError:
+        print("Config file does not exist. Please use command 'init' to generate a new pmconfig.json file.")
+    except ConfigParseError:
+        print("Config file pmconfig.json is corrupted. To initialize a new config, delete the corrupted one or use init --force.")
+
+
+# @FEAT add DONE 
+def add_to_config(config_path: str, args: list[str], kwargs: dict[str, str | bool]):
+    if len(args) < 2 or args[1] not in ['feature', 'feat', 'path', 'projectpath']:
+        raise Exception('One of (feature | feat | projectpath | path) expected.')
+
+    config = get_config(config_path)
+    if args[1] in ['feature', 'feat']:
+        config.add_feature_from_stdin()
+    else:
+        config.add_new_project_path()
+
+    io.write_json(config.to_json(), config_path)
+
+
+def get_config(config_path: str, update_if_change: bool = False):
+    if not os.path.exists(config_path):
+        raise FileNotFoundError('Config Does not Exist')
+    try:
+        config_json = io.read_json(config_path)
+        config = Config.from_json(config_json)
+    except:
+        raise ConfigParseError()
 
     if config.to_json() != config_json and update_if_change:
-        io.write_json(config.to_json(), config_path.config_path)
+        io.write_json(config.to_json(), config_path)
 
     return config
-
-
-def init_config(config_path: ConfigPath, args: list[str], kwargs: dict[str, str | bool]):
-    assert not config_path.does_config_exist(), 'Config already exists!'
-    new_config = Config.from_stdin()
-    io.write_json(new_config.to_json(), config_path.config_path)
 
 
 def scan_project_path(config: Config, root_path: str, project_path: ProjectPath, verbose: bool = False):
@@ -72,7 +105,7 @@ def scan_feature_complete(config: Config, root_path: str, project_path: ProjectP
                 continue
 
             if curr_feature_flag in feature_flags:
-                print(f"Feature flag {curr_feature_flag} found in {feature_flags[curr_feature_flag][0].path} and {item.path}")
+                print(f"Feature flag {curr_feature_flag} found in {feature_flags[curr_feature_flag][1]} and {item.path}")
                 continue
             feature_flags[curr_feature_flag] = status, item.path
 
@@ -90,43 +123,37 @@ def scan_feature_complete(config: Config, root_path: str, project_path: ProjectP
 def main():
     args, kwargs = parse(sys.argv[1:])
     command = args[0] if len(args) > 0 else 'view'
-    assert command in ('init', 'view', 'scan', 'edit', 'set')
+    assert command in ('init', 'add', 'view', 'scan', 'set')
 
-    config_path = ConfigPath(kwargs.get('--path'))
+
+    root_path, config_path = get_root_path_and_config_path(kwargs.get('--path'))
 
     match command:
-        # @FEAT create DONE
         case 'init':
             init_config(config_path, args, kwargs)
+        case 'add':
+            add_to_config(config_path, args, kwargs)
         case 'view':
             config = get_config(config_path, kwargs.get('-u', False) or kwargs.get('--update', False))
             config.to_stdout(kwargs.get('-v', False) or kwargs.get('--verbose', False))
-        # @FEAT edit TODO
-        case 'edit':
-            pass
+        # @FEAT scan DONE
         case 'scan':
             config = get_config(config_path, kwargs.get('-u', False) or kwargs.get('--update', False))
             for project_path in config.project_paths:
-                # @FEAT scan-todo DONE
-                scan_project_path(config, config_path.root_path, project_path, kwargs.get('-v', False) or kwargs.get('--verbose', False))
+                scan_project_path(config, root_path, project_path, kwargs.get('-v', False) or kwargs.get('--verbose', False))
                 print("\n")
-                # @FEAT measure-feat
-                scan_feature_complete(config, config_path.root_path, project_path, kwargs.get('-v', False) or kwargs.get('--verbose', False))
+                scan_feature_complete(config, root_path, project_path, kwargs.get('-v', False) or kwargs.get('--verbose', False))
         case 'set':
             config = get_config(config_path)
 
-            if len(args) < 2:
-                # TODO
-                pass
-            elif args[1] not in ['todo-flag', 'feat-flag', 'line-padding']:
-                # TODO
-                pass
+            if len(args) < 2 or args[1] not in ['todo-flag', 'feat-flag', 'line-padding']:
+                print("One of (todo-flag | feat-flag | line-padding) expected")
             elif len(args) < 3:
                 config.options.pop(args[1], None)
             else:
                 config.options[args[1]] = args[2]
 
-            io.write_json(config.to_json(), config_path.config_path)
+            io.write_json(config.to_json(), config_path)
 
 
 def parse(input_args: list[str]):

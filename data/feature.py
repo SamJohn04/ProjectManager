@@ -13,19 +13,29 @@ class Feature:
             print(f"\t{self.name}")
 
     @staticmethod
-    def from_json(json_data: str | list[str]):
-        if isinstance(json_data, str):
-            name = input(f'Name of feature {json_data}: ')
-            description = json_data
-        else:
-            name, description = json_data
+    def from_json(json_data: list[str]):
+        name, description = json_data
+
+        return Feature(name, description)
+
+    @classmethod
+    def from_stdin(cls):
+        name = cls.get_feature_name_from_stdin("Feature Name: ")
+
+        description = input("Feature Description: ")
 
         return Feature(name, description)
 
     @staticmethod
-    def from_stdin():
-        name = input("Feature Name: ")
-        description = input("Feature Description: ")
+    def get_feature_name_from_stdin(message: str):
+        name = input(message)
 
-        return Feature(name, description)
+        while name == '' or ' ' in name:
+            if name == '':
+                print("Name cannot be empty")
+            if ' ' in name:
+                print("Name cannot have whitespaces.")
+            name = input(message)
+
+        return name
 

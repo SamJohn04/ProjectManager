@@ -3,32 +3,20 @@
     "description": "CLI tool for concise project management.",
     "features": [
         [
-            "create",
-            "Config creation"
+            "init",
+            "Initialize project manager, generate the Config."
         ],
         [
-            "edit",
-            "Config edit"
+            "view",
+            "View details from the Config."
         ],
         [
-            "scan-todo",
-            "Scan files for TODOs"
+            "add",
+            "Add features and ProjectPaths."
         ],
         [
-            "git-init",
-            "Generate git (if not present)"
-        ],
-        [
-            "project-paths",
-            "Allow separate paths listing"
-        ],
-        [
-            "measure-feat",
-            "Measure feature completion (by flag comments., etc.)"
-        ],
-        [
-            "measure-test",
-            "Measure tests completion (by flag comments., etc.)"
+            "scan",
+            "Scan files for TODOs, completion, etc."
         ]
     ],
     "paths": [
@@ -41,5 +29,5 @@
             ]
         }
     ],
-    "todo-flag": "pass"
+    "todo-flag": "# TODO"
 }
